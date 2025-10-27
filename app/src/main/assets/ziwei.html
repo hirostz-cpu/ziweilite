@@ -1,0 +1,545 @@
+# Android APK Wrapper Project (WebView) for: 紫微个性化日历（Android友好·极简v1.2）
+# 说明 / README
+# 1) 复制本文件中每一段 `=== file: ... ===` 到对应路径（Android Studio 工程）。
+# 2) 用 Android Studio 打开工程 → Build > Build Bundle(s) / APK(s) > Build APK(s) → 生成 APK。
+# 3) 本项目离线运行，不需要网络权限；WebView 已启用 JavaScript + localStorage。
+# 4) 你的 HTML 已放在 `app/src/main/assets/ziwei.html`（内容见最下面）。
+
+=== file: settings.gradle ===
+pluginManagement {
+  repositories { gradlePluginPortal(); google(); mavenCentral() }
+}
+dependencyResolutionManagement {
+  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+  repositories { google(); mavenCentral() }
+}
+rootProject.name = "ZiweiLite"
+include(":app")
+
+=== file: build.gradle (Project) ===
+plugins {
+  id 'com.android.application' version '8.1.0' apply false
+}
+
+=== file: app/build.gradle (Module: app) ===
+plugins { id 'com.android.application' }
+
+android {
+  namespace 'com.example.ziweilite'
+  compileSdk 34
+
+  defaultConfig {
+    applicationId "com.example.ziweilite"
+    minSdk 21
+    targetSdk 34
+    versionCode 1
+    versionName "1.0"
+  }
+  buildTypes {
+    release {
+      minifyEnabled false
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    }
+  }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+}
+
+dependencies {
+  implementation 'androidx.appcompat:appcompat:1.7.0'
+  implementation 'com.google.android.material:material:1.12.0'
+}
+
+=== file: app/proguard-rules.pro ===
+# 空即可（未使用混淆）
+
+=== file: app/src/main/AndroidManifest.xml ===
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application
+      android:allowBackup="true"
+      android:label="Ziwei 日历"
+      android:icon="@mipmap/ic_launcher"
+      android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+    <activity android:name=".MainActivity"
+              android:exported="true"
+              android:screenOrientation="portrait">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN"/>
+        <category android:name="android.intent.category.LAUNCHER"/>
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>
+
+=== file: app/src/main/res/layout/activity_main.xml ===
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent">
+  <WebView
+    android:id="@+id/web"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"/>
+</FrameLayout>
+
+=== file: app/src/main/java/com/example/ziweilite/MainActivity.java ===
+package com.example.ziweilite;
+
+import android.os.Build;
+import android.os.Bundle;
+import android.view.KeyEvent;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
+import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class MainActivity extends AppCompatActivity {
+    private WebView web;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
+        setContentView(R.layout.activity_main);
+
+        web = findViewById(R.id.web);
+        WebSettings s = web.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);      // 启用 localStorage
+        s.setDatabaseEnabled(true);
+        s.setAllowFileAccess(true);
+        s.setAllowContentAccess(true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            s.setAllowFileAccessFromFileURLs(true);
+            s.setAllowUniversalAccessFromFileURLs(true);
+        }
+        // 提高渲染优先级
+        web.setWebViewClient(new WebViewClient());
+        web.getSettings().setLoadWithOverviewMode(true);
+        web.getSettings().setUseWideViewPort(true);
+
+        web.loadUrl("file:///android_asset/ziwei.html");
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && web != null && web.canGoBack()) {
+            web.goBack();
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+}
+
+=== file: app/src/main/assets/ziwei.html ===
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#0b1e3a" />
+<link rel="manifest" href="manifest.webmanifest" />
+<title>紫微个性化日历（Android友好·极简v1.2）— 单文件HTML</title>
+<style>
+  :root{
+    --bg1:#0b1e3a; --bg2:#123b6b;
+    --card:#fff; --ink:#0b1220; --ink2:#475569; --line:#e6eef7;
+    --good:#e53935; --okay:#2e7d32; --bad:#fb8c00;
+  }
+  html,body{height:100%}
+  body{margin:0;background:linear-gradient(180deg,var(--bg1),var(--bg2));font-family:system-ui,-apple-system,Segoe UI,Roboto,Noto Sans SC,Arial,"PingFang SC","Hiragino Sans GB","Microsoft Yahei",sans-serif;color:#fff}
+  *{-webkit-tap-highlight-color:transparent}
+
+  .wrap{max-width:1100px;margin:20px auto;padding:0 10px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;flex-wrap:wrap}
+  h1{margin:0;font-size:clamp(18px,4vw,28px)}
+  .ver{font-size:12px;opacity:.9}
+
+  .panel{margin-top:12px;display:grid;grid-template-columns:1.2fr .9fr;gap:10px}
+  @media(max-width:920px){.panel{grid-template-columns:1fr}}
+  .card{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:12px}
+
+  /* 控件 */
+  label{font-size:12px;color:var(--ink2);display:block;margin:0 0 4px}
+  input,select,button{border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;font-size:16px;min-height:44px}
+  button.primary{background:#5fb3ff;color:#04203d;border:none;font-weight:700}
+  .controls{display:grid;grid-template-columns:repeat(6,minmax(140px,1fr));gap:8px;align-items:end}
+  @media(max-width:900px){.controls{grid-template-columns:1fr 1fr}}
+  @media(max-width:420px){.controls{grid-template-columns:1fr}}
+  .status{font-size:12px;margin-left:6px}
+
+  /* 周栏+网格 */
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;color:#0b1e3a;font-weight:700}
+  .week>div{background:#eaf6ff;border:1px solid #e2effa;border-radius:8px;text-align:center;padding:6px 0}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:6px}
+  .cell{background:#fff;border:1px solid var(--line);border-radius:10px;min-height:78px;padding:8px;display:flex;flex-direction:column;cursor:pointer}
+  .cell .row{display:flex;justify-content:space-between;align-items:center}
+  .num{font-weight:700}
+  .badge{padding:2px 8px;border-radius:999px;font-size:12px;color:#fff}
+  .b-good{background:var(--good)}.b-okay{background:var(--okay)}.b-bad{background:var(--bad)}
+  .mark{margin-top:auto;display:flex;gap:6px}
+  .dot{width:12px;height:12px;border-radius:50%}
+  .dot.good{background:var(--good)}.dot.okay{background:var(--okay)}.dot.bad{background:var(--bad)}
+  .disabled{opacity:.4}
+
+  /* 详情 */
+  .kv{display:grid;grid-template-columns:118px 1fr;gap:8px;font-size:14px}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px dashed #cbd5e1;background:#f6faff}
+  .sect{margin-top:10px}
+  .list{margin:6px 0 0 0;padding-left:18px}
+  .time{width:108px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#0b1e3a}
+  .row2{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed #e8eef7;flex-wrap:wrap}
+  .tag{padding:4px 8px;border-radius:999px;font-size:12px;color:#fff}
+  .t-good{background:var(--good)}.t-okay{background:var(--okay)}.t-bad{background:var(--bad)}
+  .note{color:#334155;font-size:13px}
+  .tops{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  @media(max-width:520px){.tops{grid-template-columns:1fr}}
+  .topcard{border:1px dashed #cbd5e1;border-radius:10px;padding:8px;background:#fff}
+
+  .muted{color:#94a3b8;font-size:12px}
+  .legend{display:flex;gap:10px;align-items:center;margin-top:6px}
+
+  .dbg{margin-top:6px;font-size:12px;color:#0b1e3a;background:#fff;border:1px dashed #cbd5e1;border-radius:10px;padding:8px;display:none}
+  .dbg pre{white-space:pre-wrap;word-break:break-word;margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>紫微个性化日历（Android友好·极简v1.2）</h1>
+    <div class="ver">无动画 · 无性别分支 · 香港时间直输 · 支持本地化日期输入</div>
+  </header>
+
+  <div class="panel">
+    <section class="card">
+      <div class="controls">
+        <div>
+          <label>姓名（可选）</label>
+          <input id="name" type="text" placeholder="例：张三" />
+        </div>
+        <div>
+          <label>出生日期（可填：2025-10-27 / 27/10/2025 / 27-10-2025）</label>
+          <input id="dob" type="text" placeholder="YYYY-MM-DD 或 DD/MM/YYYY" />
+        </div>
+        <div>
+          <label>出生时间（香港，24h；可填 01:20 / 01.20 / 0120）</label>
+          <input id="tob" type="text" placeholder="HH:MM / HH.MM / HHMM" />
+        </div>
+        <div>
+          <label>年份（1950–2100）</label>
+          <select id="year"></select>
+        </div>
+        <div>
+          <label>月份</label>
+          <select id="month">
+            <option value="0">1月</option><option value="1">2月</option><option value="2">3月</option><option value="3">4月</option>
+            <option value="4">5月</option><option value="5">6月</option><option value="6">7月</option><option value="7">8月</option>
+            <option value="8">9月</option><option value="9">10月</option><option value="10">11月</option><option value="11">12月</option>
+          </select>
+        </div>
+        <div>
+          <button id="apply" class="primary">应用出生数据</button>
+          <button id="reset">清空</button>
+          <label style="display:inline-flex;gap:6px;align-items:center;font-size:12px;margin-left:6px">
+            <input id="toggleDbg" type="checkbox"/> 诊断
+          </label>
+          <span id="msg" class="status"></span>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span class="dot good"></span><span class="muted">红=吉</span>
+        <span class="dot okay"></span><span class="muted">绿=平</span>
+        <span class="dot bad"></span><span class="muted">橙=凶</span>
+      </div>
+
+      <div class="week" style="margin-top:8px">
+        <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
+      </div>
+      <div id="grid" class="grid" aria-live="polite"></div>
+      <div id="status" class="muted" style="margin-top:6px"></div>
+      <div id="dbg" class="dbg"><pre id="dbgText"></pre></div>
+    </section>
+
+    <aside class="card">
+      <h3 style="margin:.2em 0">当天提示（个性化）</h3>
+      <div class="kv">
+        <div>日期</div><div id="d-date">—</div>
+        <div>日干支</div><div id="d-gz">—</div>
+        <div>月令（估）</div><div id="d-monthzhi">—</div>
+        <div>命锚（出生日支 / 时支）</div><div id="d-anchor">—</div>
+        <div>综合</div><div id="d-overall">—</div>
+      </div>
+
+      <div class="sect">
+        <h4>建议（按领域）</h4>
+        <ul id="domains" class="list"></ul>
+      </div>
+      <div class="sect">
+        <h4>宜 / 忌（当日）</h4>
+        <ul id="doDont" class="list"></ul>
+      </div>
+      <div class="sect">
+        <h4>最佳时段（Top 3）</h4>
+        <div id="tops" class="tops"></div>
+      </div>
+      <div class="sect">
+        <h4>时辰（每两小时）</h4>
+        <div id="shi"></div>
+      </div>
+
+      <p class="muted" style="margin-top:8px">注：简化版紫微提示（未含星曜、四化）。以出生<b>日支</b>与<b>时支</b>为个性化锚点；节气月令按常见日期近似，仅作参考。<br>隐私：数据<b>只存本机浏览器</b>（localStorage），不上传。</p>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ===== 数据与工具 =====
+  var STEMS=["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"]; var BRANCHES=["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+  var LIU_HE=new Set(["子-丑","丑-子","寅-亥","亥-寅","卯-戌","戌-卯","辰-酉","酉-辰","巳-申","申-巳","午-未","未-午"]);
+  var LIU_CHONG=new Set(["子-午","午-子","丑-未","未-丑","寅-申","申-寅","卯-酉","酉-卯","辰-戌","戌-辰","巳-亥","亥-巳"]);
+  var SAN_HE=[["申","子","辰"],["亥","卯","未"],["寅","午","戌"],["巳","酉","丑"]];
+  function sameSanHe(a,b){for(var i=0;i<SAN_HE.length;i++){var g=SAN_HE[i]; if(g.indexOf(a)>-1&&g.indexOf(b)>-1&&a!==b) return true;} return false;}
+  var SHICHEN=[{zhi:"子",start:23,end:1},{zhi:"丑",start:1,end:3},{zhi:"寅",start:3,end:5},{zhi:"卯",start:5,end:7},{zhi:"辰",start:7,end:9},{zhi:"巳",start:9,end:11},{zhi:"午",start:11,end:13},{zhi:"未",start:13,end:15},{zhi:"申",start:15,end:17},{zhi:"酉",start:17,end:19},{zhi:"戌",start:19,end:21},{zhi:"亥",start:21,end:23}];
+
+  function approxMonthZhi(d){var y=d.getFullYear();var cps=[{m:1,d:6,z:"丑"},{m:2,d:4,z:"寅"},{m:3,d:6,z:"卯"},{m:4,d:5,z:"辰"},{m:5,d:6,z:"巳"},{m:6,d:6,z:"午"},{m:7,d:7,z:"未"},{m:8,d:8,z:"申"},{m:9,d:8,z:"酉"},{m:10,d:8,z:"戌"},{m:11,d:7,z:"亥"},{m:12,d:7,z:"子"},{m:13,d:1,z:"丑"}];for(var i=cps.length-1;i>=0;i--){var cp=cps[i];var cm=cp.m>12?1:cp.m;var cy=cp.m>12?y+1:y;var t=new Date(cy,cm-1,cp.d);if(d>=t)return cp.z;}return"丑";}
+  function dayOfYearUTC(y,m,d){var t0=Date.UTC(y,0,1),t=Date.UTC(y,m-1,d);return Math.floor((t-t0)/86400000)+1;}
+  function ganzhiOfDate(y,m,d){var x=y>=2000?(y-1900):(y%100);var Y=dayOfYearUTC(y,m,d);var v=5*(x-1)+Math.floor((x-1)/4)+15+Y;var r10=v%10,r12=v%12;return{stem:STEMS[r10!==0?r10-1:9],branch:BRANCHES[r12!==0?r12-1:11]};}
+  function startingStemForZi(dayStem){if(dayStem==="甲"||dayStem==="己")return"甲";if(dayStem==="乙"||dayStem==="庚")return"丙";if(dayStem==="丙"||dayStem==="辛")return"戊";if(dayStem==="丁"||dayStem==="壬")return"庚";if(dayStem==="戊"||dayStem==="癸")return"壬";return"甲";}
+  function pad2(n){return String(n).padStart(2,'0');}
+  function parseTimeStr(t){if(!t)return null;var s=(''+t).trim().replace('.',':');if(/^\d{1,2}:\d{2}$/.test(s)){var a=s.split(':');var hh=+a[0],mm=+a[1];if(hh>=0&&hh<24&&mm>=0&&mm<60)return{h:hh,m:mm};}if(/^\d{3,4}$/.test(s)){var z=(''+s).padStart(4,'0');var hh2=+z.slice(0,2),mm2=+z.slice(2);if(hh2>=0&&hh2<24&&mm2>=0&&mm2<60)return{h:hh2,m:mm2};}return null;}
+  function parseDateStr(s){if(!s)return null;s=(''+s).trim();var m1=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);if(m1)return{Y:+m1[1],M:+m1[2],D:+m1[3]};var m2=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);if(m2)return{Y:+m2[3],M:+m2[2],D:+m2[1]};return null;}
+  function branchFromHM(h,m){var mm=h*60+m;var r=[{z:"子",s:1380,e:1440},{z:"子",s:0,e:60},{z:"丑",s:60,e:180},{z:"寅",s:180,e:300},{z:"卯",s:300,e:420},{z:"辰",s:420,e:540},{z:"巳",s:540,e:660},{z:"午",s:660,e:780},{z:"未",s:780,e:900},{z:"申",s:900,e:1020},{z:"酉",s:1020,e:1140},{z:"戌",s:1140,e:1260},{z:"亥",s:1260,e:1380}];for(var i=0;i<r.length;i++){var it=r[i];if(mm>=it.s&&mm<it.e)return it.z;}return"子";}
+  function relScore(a,b){if(!a||!b)return 0;if(a===b)return 2;if(LIU_HE.has(a+"-"+b)||sameSanHe(a,b))return 3;if(LIU_CHONG.has(a+"-"+b))return-3;return 0;}
+  function classify(t){if(t>=3)return{k:"吉",cls:"good"};if(t<=-3)return{k:"凶",cls:"bad"};return{k:"平",cls:"okay"};}
+
+  function adviceByTag(cls){
+    if(cls==="good")return{do:["推进关键事项/签约 ｜ Dorong hal penting/penandatanganan","沟通合作、请益上级 ｜ Komunikasi & kolaborasi, minta arahan atasan","学习考试/提交作品 ｜ Belajar/ujian, kirim karya"],dont:["拖延犹豫 ｜ Menunda & ragu-ragu","情绪化决策 ｜ Keputusan emosional","逞强熬夜 ｜ Memaksakan diri/begadang"]};
+    if(cls==="bad")return{do:["先做准备/备选方案 ｜ Siapkan rencana & opsi cadangan","复盘/体检/保守理财 ｜ Evaluasi, jaga kesehatan, finansial konservatif","低冲突沟通 求同存异 ｜ Komunikasi rendah-konflik, cari titik temu"],dont:["签重大合约 ｜ Tanda tangan kontrak besar","高风险投资/借贷 ｜ Investasi berisiko/utang","硬刚/口角 ｜ Konfrontasi/adu mulut"]};
+    return{do:["例行推进/整理文档 ｜ Lanjut rutin/rapikan dokumen","小额理财/费用审查 ｜ Kelola kecil/periksa biaya","适度运动/家务 ｜ Olahraga ringan/urusan rumah"],dont:["过度承诺 ｜ Janji berlebihan","临时变更大计划 ｜ Ubah rencana besar mendadak","长时间分心 ｜ Terlalu lama terdistraksi"]};
+  }
+  function domainNarratives(cls){
+    if(cls==="good")return["健康：体能与恢复尚可，宜规律运动与作息矫正，注意补水与拉伸。 ｜ Kesehatan: stamina & pemulihan cukup; olahraga teratur, atur tidur; hidrasi & peregangan.","财务：正财与合作面向较顺，可推进合规项目与预算评审。 ｜ Keuangan: arus utama lancar; lanjut proyek legal & review anggaran.","事业/工作：沟通顺畅，适合汇报、谈合作、定关键节点与交付计划。 ｜ Karier/Pekerjaan: komunikasi lancar; cocok laporan, negosiasi, tetapkan milestone & rencana deliverable.","家庭：安排团聚沟通，分工配合顺手，宜处理家务与排期。 ｜ Keluarga: komunikasi & kebersamaan; pembagian tugas lancar; atur jadwal & urusan rumah.","感情/社交：人际互动正向，宜表达与约会，亦可拓展人脉。 ｜ Hubungan/Sosial: interaksi positif; baik untuk ungkapkan perasaan, kencan, perluas jaringan."];
+    if(cls==="bad")return["健康：易疲劳与情绪波动，早睡清淡为宜，避免高强度熬夜。 ｜ Kesehatan: mudah lelah/emosi; tidur lebih awal, makan ringan; hindari begadang & aktivitas berat.","财务：以保守为主，回避高波动交易与冲动消费，关注现金流。 ｜ Keuangan: konservatif; hindari transaksi volatil & belanja impulsif; perhatikan arus kas.","事业/工作：冲突概率上升，延后关键决策，先做预案与风控。 ｜ Karier/Pekerjaan: risiko konflik naik; tunda keputusan kunci; siapkan rencana & mitigasi.","家庭：求同存异，暂缓争议话题，先沟通事实与分工。 ｜ Keluarga: cari titik temu; tunda topik sensitif; fokus pada fakta & pembagian tugas.","感情/社交：避免激烈言辞，防误解，耐心倾听更有利。 ｜ Hubungan/Sosial: hindari kata-kata tajam; cegah salah paham; dengarkan dengan sabar."];
+    return["健康：维持日常节律，适合轻强度运动与步行。 ｜ Kesehatan: jaga ritme harian; olahraga ringan/jalan kaki.","财务：核对账目与费用，做小额优化即可。 ｜ Keuangan: cek catatan & biaya; optimasi kecil.","事业/工作：执行例行事项，稳步推进，重质量与复盘。 ｜ Karier/Pekerjaan: jalankan rutinitas; maju stabil; fokus kualitas & evaluasi.","家庭：保持稳定与互助，安排日程与家务分配。 ｜ Keluarga: stabil & saling bantu; atur jadwal & pembagian tugas.","感情/社交：平稳相处，轻社交/短聚最合适。 ｜ Hubungan/Sosial: interaksi santai; pertemuan singkat."];
+  }
+
+  // ===== DOM =====
+  var nameInp=$('#name'), dobInp=$('#dob'), tobInp=$('#tob'), yearSel=$('#year'), monthSel=$('#month');
+  var grid=$('#grid'), statusEl=$('#status'), msg=$('#msg'), dbg=$('#dbg'), dbgText=$('#dbgText'), dbgToggle=$('#toggleDbg');
+  var dDate=$('#d-date'), dGZ=$('#d-gz'), dMonthZhi=$('#d-monthzhi'), dAnchor=$('#d-anchor'), dOverall=$('#d-overall');
+  var domainsBox=$('#domains'), doDontBox=$('#doDont'), topsBox=$('#tops'), shiBox=$('#shi');
+  function $(id){return document.getElementById(id.replace('#',''));}
+
+  var natalDayBranch=null, natalHourBranch=null;
+
+  // ===== LocalStorage =====
+  var LS_KEY='zw_lite_v12';
+  function saveLS(){try{localStorage.setItem(LS_KEY,JSON.stringify({name:nameInp.value||'',dob:dobInp.value||'',tob:tobInp.value||'',y:yearSel.value||'',m:monthSel.value||''}))}catch(e){}}
+  function loadLS(){try{var raw=localStorage.getItem(LS_KEY);if(!raw)return;var d=JSON.parse(raw||'{}');if(d.name)nameInp.value=d.name;if(d.dob)dobInp.value=d.dob;if(d.tob)tobInp.value=d.tob;if(d.y)yearSel.value=d.y;if(d.m)monthSel.value=d.m;if(d.dob&&d.tob)apply();}catch(e){}}
+
+  // ===== 初始化选择器 =====
+  function initSelectors(){for(var y=1950;y<=2100;y++){var o=document.createElement('option');o.value=''+y;o.textContent=''+y;yearSel.appendChild(o);}var now=new Date();yearSel.value=''+now.getFullYear();monthSel.value=''+now.getMonth();if(!yearSel.value)yearSel.value=''+now.getFullYear();if(monthSel.value===''||monthSel.value==null)monthSel.value=''+now.getMonth();}
+  function firstDayMondayIndex(y,m){var d=new Date(y,m,1),w=d.getDay();if(w===0)w=7;return w-1}
+  function daysInMonth(y,m){return new Date(y,m+1,0).getDate()}
+
+  function renderCalendar(){
+    try{grid.innerHTML='';var y=parseInt(yearSel.value,10),m=parseInt(monthSel.value,10);if(isNaN(y)||y<1950||y>2100){y=(new Date()).getFullYear();yearSel.value=''+y;}if(isNaN(m)||m<0||m>11){m=(new Date()).getMonth();monthSel.value=''+m;}
+      var pad=firstDayMondayIndex(y,m), total=daysInMonth(y,m), monthZhi=approxMonthZhi(new Date(y,m,15));
+      for(var i=0;i<pad;i++){var ph=document.createElement('div');ph.className='cell disabled';grid.appendChild(ph);}for(var d=1;d<=total;d++){(function(d){var cell=document.createElement('div');cell.className='cell';var top=document.createElement('div');top.className='row';var num=document.createElement('div');num.className='num';num.textContent=''+d;var badge=document.createElement('span');badge.className='badge';var gz=ganzhiOfDate(y,m+1,d);var tag;if(natalHourBranch&&natalDayBranch){var sc=dayScore(gz.branch,monthZhi,natalDayBranch,natalHourBranch);tag=sc.tag;}else{tag=classify(relScore(monthZhi,gz.branch));}badge.textContent=tag.k;badge.classList.add(tag.cls==='good'?'b-good':tag.cls==='bad'?'b-bad':'b-okay');top.appendChild(num);top.appendChild(badge);cell.appendChild(top);var mark=document.createElement('div');mark.className='mark';var dot=document.createElement('div');dot.className='dot '+(tag.cls==='good'?'good':tag.cls==='bad'?'bad':'okay');mark.appendChild(dot);cell.appendChild(mark);cell.addEventListener('click',function(){selectDay(new Date(y,m,d));});grid.appendChild(cell);})(d);}var today=new Date();if(today.getFullYear()===y&&today.getMonth()===m)selectDay(today);else selectDay(new Date(y,m,1));statusEl.textContent='渲染成功';}
+    catch(e){statusEl.textContent='渲染异常：'+(e&&e.message?e.message:e)}}
+
+  function dayScore(dayBranch,monthBranch,natalDayBranch,natalHourBranch){var total=2*relScore(natalHourBranch,dayBranch)+1*relScore(natalDayBranch,dayBranch)+0.5*relScore(monthBranch,dayBranch);return{total:total,tag:classify(total)}}
+  function buildShiList(dayDate,dayStem,dayBranch,monthBranch){var startStem=startingStemForZi(dayStem),stemIdx=STEMS.indexOf(startStem),rows=[];for(var i=0;i<SHICHEN.length;i++){var slot=SHICHEN[i],zhi=slot.zhi,stem=STEMS[(stemIdx+i)%10];var base=new Date(dayDate.getFullYear(),dayDate.getMonth(),dayDate.getDate());var s=new Date(base);s.setHours(slot.start,0,0,0);if(slot.start===23)s.setDate(s.getDate()-1);var e=new Date(base);e.setHours(slot.end,0,0,0);var label=pad2(s.getHours())+':'+pad2(s.getMinutes())+'–'+pad2(e.getHours())+':'+pad2(e.getMinutes());var score=2*relScore(natalHourBranch,zhi)+1*relScore(natalDayBranch,zhi)+0.5*relScore(monthBranch,zhi);var tag=classify(score),adv=adviceByTag(tag.cls);rows.push({time:label,zhi:zhi,stem:stem,score:score,tag:tag,adv:adv});}var top=rows.slice().sort(function(a,b){return b.score-a.score}).slice(0,3);return{rows:rows,top:top}}
+
+  function selectDay(date){var y=date.getFullYear(),m=date.getMonth()+1,d=date.getDate();dDate.textContent=y+'年'+m+'月'+d+'日（周'+'日一二三四五六'[date.getDay()]+')';var gz=ganzhiOfDate(y,m,d);dGZ.textContent=gz.stem+gz.branch;var mz=approxMonthZhi(date);dMonthZhi.textContent=mz+'月';var tag,total;if(natalHourBranch&&natalDayBranch){var sc=dayScore(gz.branch,mz,natalDayBranch,natalHourBranch);tag=sc.tag;total=sc.total;}else{tag=classify(relScore(mz,gz.branch));total=0;}dAnchor.textContent=(natalHourBranch&&natalDayBranch)?(natalDayBranch+'日 / '+natalHourBranch+'时'):'（未设置）';dOverall.innerHTML='<span class="pill"><span class="dot '+(tag.cls==='good'?'good':tag.cls==='bad'?'bad':'okay')+'"></span><b>'+tag.k+'</b>｜'+(tag.cls==='good'?'顺势推进':(tag.cls==='bad'?'低冲突保守':'稳步执行'))+'</span>';var dom=domainNarratives(tag.cls),keys=["健康","财务","事业/工作","家庭","感情/社交"];domainsBox.innerHTML='';for(var i=0;i<keys.length;i++){var li=document.createElement('li');li.textContent=keys[i]+'：'+dom[i];domainsBox.appendChild(li);}var dd=adviceByTag(tag.cls);doDontBox.innerHTML='';var liDo=document.createElement('li');liDo.innerHTML='宜：'+dd.do.join('、');doDontBox.appendChild(liDo);var liDont=document.createElement('li');liDont.innerHTML='忌：'+dd.dont.join('、');doDontBox.appendChild(liDont);var pack=buildShiList(date,gz.stem,gz.branch,mz),rows=pack.rows,tops=pack.top;shiBox.innerHTML='';for(var j=0;j<rows.length;j++){var r=rows[j];var div=document.createElement('div');div.className='row2';var t=document.createElement('div');t.className='time';t.textContent=r.time;var w=document.createElement('div');w.innerHTML='<b>'+r.zhi+'</b> / '+r.stem;var tg=document.createElement('div');tg.className='tag '+(r.tag.cls==='good'?'t-good':r.tag.cls==='bad'?'t-bad':'t-okay');tg.textContent=r.tag.k;var note=document.createElement('div');note.className='note';note.textContent='宜：'+r.adv.do.join('、')+' ｜ 忌：'+r.adv.dont.join('、');div.appendChild(t);div.appendChild(w);div.appendChild(tg);div.appendChild(note);shiBox.appendChild(div);}topsBox.innerHTML='';for(var k=0;k<tops.length;k++){var c=document.createElement('div');c.className='topcard';c.innerHTML='<div class="time">'+tops[k].time+'</div><div><b>'+tops[k].zhi+'</b> / '+tops[k].stem+' ｜ <span class="tag '+(tops[k].tag.cls==='good'?'t-good':tops[k].tag.cls==='bad'?'t-bad':'t-okay')+'">'+tops[k].tag.k+'</span></div>';topsBox.appendChild(c);}
+
+  }
+
+  function apply(){var dob=dobInp.value,tob=tobInp.value;if(!dob||!tob){msg.textContent='请先设置出生日期与香港时间';msg.style.color='#ffb4b4';return;}var dt=parseDateStr(dob);if(!dt){msg.textContent='日期格式无效（例：2025-10-27 / 27/10/2025）';msg.style.color='#ffb4b4';return;}var Y=dt.Y,M=dt.M,D=dt.D;var gz=ganzhiOfDate(Y,M,D);natalDayBranch=gz.branch;var tm=parseTimeStr(tob);if(!tm){msg.textContent='时间格式无效（例：01:20 / 01.20 / 0120）';msg.style.color='#ffb4b4';return;}natalHourBranch=branchFromHM(tm.h,tm.m);msg.textContent='已应用：'+Y+'年'+M+'月'+D+'日（日支'+natalDayBranch+'），'+pad2(tm.h)+':'+pad2(tm.m)+'（时支'+natalHourBranch+'）';msg.style.color='#b4f0ff';saveLS();renderCalendar();if(dbgToggle.checked){dumpDbg({dob:dob,tob:tob,parsedDate:dt,parsedTime:tm,dayGZ:gz,hrZhi:natalHourBranch});}}
+  function reset(){natalDayBranch=null;natalHourBranch=null;try{localStorage.removeItem(LS_KEY);}catch(e){}nameInp.value='';dobInp.value='';tobInp.value='';msg.textContent='已清空个性化（本地存储也已删除）';msg.style.color='#b4f0ff';saveLS();renderCalendar();if(dbgToggle.checked){dumpDbg({reset:true});}}
+
+  function dumpDbg(obj){dbg.style.display='block';dbgText.textContent=JSON.stringify(obj,null,2)}
+
+  yearSel.addEventListener('change',function(){saveLS();renderCalendar()});monthSel.addEventListener('change',function(){saveLS();renderCalendar()});
+  nameInp.addEventListener('input',saveLS);dobInp.addEventListener('input',saveLS);tobInp.addEventListener('input',saveLS);
+  document.getElementById('apply').addEventListener('click',apply);document.getElementById('reset').addEventListener('click',reset);document.getElementById('toggleDbg').addEventListener('change',function(){dbg.style.display=this.checked?'block':'none'});
+
+  initSelectors();loadLS();renderCalendar();
+
+  // PWA: 注册 Service Worker（仅当以 https/localhost 打开时生效；在 WebView 内安全忽略）
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('service-worker.js').catch(function(e){ /* 忽略错误 */ });
+    });
+  }
+})();
+</script>
+</body>
+</html>
+
+
+=== file: web/manifest.webmanifest ===
+{
+  "name": "Ziwei 日历",
+  "short_name": "Ziwei",
+  "start_url": "./pwa_ziwei.html",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#0b1e3a",
+  "theme_color": "#0b1e3a",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}
+
+=== file: web/service-worker.js ===
+const CACHE_NAME = 'ziwei-lite-v1';
+const ASSETS = [
+  './pwa_ziwei.html',
+  './manifest.webmanifest'
+];
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
+});
+self.addEventListener('fetch', e => {
+  e.respondWith(
+    caches.match(e.request).then(r => r || fetch(e.request))
+  );
+});
+
+=== file: web/pwa_ziwei.html ===
+<!-- 说明：这是给 Android 平板/手机在 Chrome 里“添加到桌面”的 PWA 入口。
+     复制本文件与 service-worker.js、manifest.webmanifest、icon-192.png、icon-512.png 到同一目录，
+     用安卓 Chrome 打开 pwa_ziwei.html → 菜单“添加到主屏幕/安装应用”。 -->
+<!DOCTYPE html><html lang="zh-Hans"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="theme-color" content="#0b1e3a"/>
+<link rel="manifest" href="manifest.webmanifest"/>
+<title>Ziwei 日历（PWA）</title>
+<style>html,body{height:100%;margin:0;background:#0b1e3a;color:#dbeafe;font-family:system-ui,-apple-system,Segoe UI,Roboto,Noto Sans SC,Arial,"PingFang SC","Hiragino Sans GB","Microsoft Yahei",sans-serif}main{max-width:760px;margin:24px auto;padding:0 12px}section{background:#0f172a;border:1px solid #1e293b;border-radius:16px;padding:14px}h1{font-size:20px;margin:0 0 8px}p{margin:8px 0}</style>
+</head><body>
+<main>
+  <section>
+    <h1>Ziwei 日历（PWA）</h1>
+    <p>此入口会在独立窗口中打开离线 HTML（支持 <b>localStorage</b>）。</p>
+    <p>
+      <button id="open" style="padding:10px 14px;border-radius:10px;border:0;background:#60a5fa;color:#07162b;font-weight:700">打开应用</button>
+    </p>
+    <p style="font-size:12px;opacity:.85">提示：首次从网络打开后即可离线使用；若需要“添加到主屏幕/安装应用”，请用 Android Chrome 菜单进行。</p>
+  </section>
+</main>
+<script>
+// 注册 SW
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+}
+document.getElementById('open').addEventListener('click',()=>{
+  // 直接打开同目录下的离线 HTML（即与你在 APK 中的 assets 同样内容）
+  window.location.href = 'ziwei.html';
+});
+</script>
+</body></html>
+
+
+=== file: .github/workflows/build-apk.yml ===
+name: Android APK (Debug)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZiweiLite-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+# ================= Optional: Signed Release (uncomment to use) =================
+# To enable signed release builds, you need to add these repo Secrets:
+# ANDROID_KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+# And also add a signingConfig in app/build.gradle (release section).
+#
+#  - name: Decode keystore
+#    if: ${{ github.event_name == 'workflow_dispatch' }}
+#    run: |
+#      echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > keystore.jks
+#    env:
+#      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+#
+#  - name: Build Release APK (signed)
+#    run: ./gradlew assembleRelease --stacktrace \
+#         -Pandroid.injected.signing.store.file=keystore.jks \
+#         -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+#         -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+#         -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+#
+#  - name: Upload Release APK
+#    uses: actions/upload-artifact@v4
+#    with:
+#      name: ZiweiLite-release-apk
+#      path: app/build/outputs/apk/release/app-release.apk
+
+
+=== file: README_GitHub_Actions.md ===
+# Build APK via GitHub Actions（Tanpa Android Studio)
+
+## Langkah singkat
+1. **Buat repo GitHub** baru (public/private bebas). Nama apa saja.
+2. Dari kanvas ini, salin **seluruh struktur proyek** (folder `app/`, file `settings.gradle`, `build.gradle`, dst.) ke repo kamu. Pastikan struktur persis.
+3. Tambahkan file workflow di path: **`.github/workflows/build-apk.yml`** (sudah ada di bawah bagian `=== file: .github/workflows/build-apk.yml ===`).
+4. Commit & push ke branch **`main`** atau **`master`**.
+5. Buka tab **Actions** di repo → pilih workflow **“Android APK (Debug)”** → **Run workflow** (kalau belum otomatis jalan).
+6. Tunggu selesai → scroll ke bawah job → di bagian **Artifacts** ada **`ZiweiLite-debug-apk`** → klik untuk **download APK**.
+7. Kirim file `app-debug.apk` ke teman kamu. Di HP mereka aktifkan *Install unknown apps*.
+
+> Debug APK sudah bisa dipakai. Kalau mau **signed release APK**, ikuti komentar di workflow: upload keystore sebagai Secrets lalu build `assembleRelease`.
+
+## Struktur wajib
+```
+root/
+ ├─ settings.gradle
+ ├─ build.gradle
+ ├─ app/
+ │   ├─ build.gradle
+ │   ├─ src/main/AndroidManifest.xml
+ │   ├─ src/main/java/com/example/ziweilite/MainActivity.java
+ │   ├─ src/main/res/layout/activity_main.xml
+ │   └─ src/main/assets/ziwei.html
+ └─ .github/workflows/build-apk.yml
+```
+
+## Ganti nama paket (opsional)
+Edit `applicationId` di `app/build.gradle`, mis. `com.namamu.ziweilite`. Setelah ganti, build lagi. Ikon & label app bisa diubah dari `AndroidManifest.xml` dan resource mipmap (opsional).
